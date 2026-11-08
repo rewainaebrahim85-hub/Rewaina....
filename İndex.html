@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة وتحليل نتائج الطلاب</title>
+</head>
+<body>
+
+    <h1>نظام إدارة وتحليل نتائج الطلاب</h1>
+    <p>افتح Console لمشاهدة نتائج النظام.</p>
+
+    <script>
+        "use strict";
+
+        // ثوابت القواعد (بدل الأرقام المبعثرة في الكود)
+        const PASS_AVERAGE = 50;
+        const MIN_ATTENDANCE = 75;
+        const WEAK_RANGE = { min: 40, max: 49 };
+        const GRACE_MARKS = 5;
+
+        // جدول التقديرات: بنمشي عليه بالترتيب ونرجع أول تقدير ينطبق
+        const GRADE_TABLE = [
+            { min: 90, label: "A" },
+            { min: 80, label: "B" },
+            { min: 70, label: "C" },
+            { min: 60, label: "D" },
+            { min: 50, label: "E" },
+            { min: 0,  label: "F" }
+        ];
+
+        // 1. Factory function بدل الـ Class
+        const createStudent = (id, name, grades, attendance) => {
+
+            // 2. حساب المتوسط باستخدام reduce (مع حماية لو المصفوفة فاضية)
+            const calculateAverage = () =>
+                grades.length
+                    ? grades.reduce((sum, g) => sum + g, 0) / grades.length
+                    : 0;
+
+            // 3. تحديد التقدير من الجدول
+            const getGrade = (average = calculateAverage()) =>
+                GRADE_TABLE.find(row => average >= row.min).label;
+
+            // 4. النتيجة النهائية
+            const getFinalResult = () =>
+                calculateAverage() >= PASS_AVERAGE && attendance >= MIN_ATTENDANCE
+                    ? "ناجح"
+                    : "يحتاج مراجعة";
+
+            // الكائن النهائي غير قابل للتعديل
+            return Object.freeze({
+                id,
+                name,
+                grades,
+                attendance,
+                calculateAverage,
+                getGrade,
+                getFinalResult
+            });
+        };
+
+        // 5. مصفوفة الطلاب
+        const studentsList = [
+            createStudent(101, "Ahmed", [80, 90, 85], 95),
+            createStudent(102, "Mona",  [45, 48, 42], 80),
+            createStudent(103, "Ali",   [30, 40, 35], 90),
+            createStudent(104, "Sara",  [60, 70, 65], 70)
+        ];
+
+        // 6. تقرير جميع الطلاب (map ثم طباعة بدل forEach)
+        console.log("===== All Students Report =====");
+
+        studentsList
+            .map(s => ({
+                "ID": s.id,
+                "Name": s.name,
+                "Average": s.calculateAverage().toFixed(2),
+                "Grade": s.getGrade(),
+                "Result": s.getFinalResult()
+            }))
+            .forEach(row => console.log(row));
+
+        // 7 + 8. filter ثم map في سلسلة واحدة (Pipeline)
+        const graceStudents = studentsList
+            .filter(s => {
+                const avg = s.calculateAverage();
+                return avg >= WEAK_RANGE.min && avg <= WEAK_RANGE.max;
+            })
+            .map(s => {
+                const oldAverage = s.calculateAverage();
+                return {
+                    id: s.id,
+                    name: s.name,
+                    oldAverage,
+                    newAverage: oldAverage + GRACE_MARKS
+                };
+            });
+
+        // 9. جمع المتوسطات الجديدة باستخدام reduce
+        const totalNewAverages = graceStudents.reduce(
+            (sum, s) => sum + s.newAverage, 0
+        );
+
+        // 10. متوسط الرأفة مع الحماية من القسمة على صفر
+        const graceAverage = graceStudents.length
+            ? totalNewAverages / graceStudents.length
+            : 0;
+
+        // 11. نتائج لجنة الرأفة
+        console.log("===== Grace Committee =====");
+        console.table(graceStudents);
+
+        // 12. متوسط المتعثرين بعد الرأفة
+        console.log("Grace Average:", graceAverage.toFixed(2));
+    </script>
+
+</body>
+  </html>
